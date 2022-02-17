@@ -1,0 +1,513 @@
+<html>
+<head>
+    <title>Blockbench</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="shortcut icon" href="icon.ico" type="image/x-icon" />
+    <link rel="stylesheet" href="w3.css">
+    <link rel="stylesheet" href="jquery-ui.min.css">
+    <link rel="stylesheet" href="style.css">
+    
+</head>
+<body>
+	<script>if (typeof module === 'object') {window.module = module; module = undefined;}</script>
+        <script src="js/vue.min.js"></script>
+        <script src="js/jquery.js"></script>
+        <script src="js/jquery-ui.min.js"></script>
+        <script src="js/three.js"></script>
+        <script src="js/OrbitControls.js"></script>
+        <script src="js/OBJExporter.js"></script>
+        
+        <script src="js/util.js"></script>
+        <script src="js/canvas.js"></script>
+        <script src="js/blockify.js"></script>
+        <script src="js/display.js"></script>
+    	<script>if (window.module) module = window.module;</script>
+    <!---->
+    <div id="blackout"></div>
+
+    <div class="dialog paddinged" id="file_loader">
+        <h2>File Loader</h2>
+        <h1></h1>
+
+        <div class="dialog_bar">
+            <input type="file" accept=".png" id="file_upload" class="hidden">
+            <label for="file_upload" id="file_upload_label"><i class="material-icons">file_upload</i>Choose a file</label>
+        </div>
+
+        <div class="dialog_bar narrow">
+            <label for="file_name">Name</label>
+        </div>
+
+        <div class="dialog_bar">
+            <input type="text" class="input_wide" id="file_name">
+        </div>
+
+        <div class="dialog_bar narrow">
+            <label for="file_folder">Subfolder</label>
+        </div>
+
+        <div class="dialog_bar">
+            <input type="text" class="input_wide" id="file_folder">
+        </div>
+
+        <div class="dialog_bar">
+            <button type="button" id="web_import_btn" class="large">Import</button>
+            <button type="button" class="large" onclick="hideDialog()">Cancel</button>
+        </div>
+    </div>
+
+    <div class="dialog paddinged" id="scaling">
+        <h2>Scale Model</h2>
+
+        <div class="dialog_bar narrow">
+            <label for="file_folder">Scale</label>
+        </div>
+
+        <div class="dialog_bar">
+            <input type="range" class="input_wide" id="model_scale_range" value="1" min="0" max="4" step="0.02" oninput="modelScaleSync()">
+            <label style="float:left;" for="model_scale_range" id="model_scale_label">1.0</label>
+        </div>
+
+        <div class="dialog_bar">
+            <button type="button" onclick="scaleAll(true)" class="large">Scale</button>
+            <button type="button" class="large" onclick="cancelScaleAll()">Cancel</button>
+        </div>
+    </div>
+
+
+    <div class="dialog paddinged" id="create_preset">
+        <h2>Create Preset</h2>
+        <div class="dialog_bar">Select the slots you want so save</div>
+
+        <div class="dialog_bar">
+            <input type="checkbox" id="thirdperson_righthand_save" checked>
+            <label for="thirdperson_righthand_save">Thirdperson Right</label>
+        </div>
+
+        <div class="dialog_bar">
+            <input type="checkbox" id="thirdperson_lefthand_save" checked>
+            <label for="thirdperson_lefthand_save">Thirdperson Left</label>
+        </div>
+
+        <div class="dialog_bar">
+            <input type="checkbox" id="firstperson_righthand_save" checked>
+            <label for="firstperson_righthand_save">Firstperson Right</label>
+        </div>
+
+        <div class="dialog_bar">
+            <input type="checkbox" id="firstperson_lefthand_save" checked>
+            <label for="firstperson_lefthand_save">Firstperson Left</label>
+        </div>
+
+        <div class="dialog_bar">
+            <input type="checkbox" id="head_save" checked>
+            <label for="head_save"">Head</label>
+        </div>
+
+        <div class="dialog_bar">
+            <input type="checkbox" id="gui_save" checked>
+            <label for="gui_save">GUI</label>
+        </div>
+
+        <div class="dialog_bar">
+            <input type="checkbox" id="ground_save" checked>
+            <label for="ground_save">Ground</label>
+        </div>
+
+        <div class="dialog_bar">
+            <input type="checkbox" id="fixed_save" checked>
+            <label for="fixed_save">Frame</label>
+        </div>
+
+        <div class="dialog_bar narrow">
+            <label>Name</label>
+        </div>
+
+        <div class="dialog_bar">
+            <input type="text" id="preset_name" class="input_wide" id="new preset">
+        </div>
+
+        <div class="dialog_bar">
+            <button type="button" class="large" onclick="createPreset()">Create</button>
+            <button type="button" class="large" onclick="hideDialog()">Cancel</button>
+        </div>
+    </div>
+
+
+    <div class="dialog" id="settings">
+        <div class="dialog_bar borderless">
+            <div class="tab open" id="setting" onclick="setSettingsTab('setting')">Settings</div>
+            <div class="tab" id="keybindings" onclick="setSettingsTab('keybindings')">Keybindings</div>
+            <div class="tab" id="credits" onclick="setSettingsTab('credits')">About</div>
+        </div>
+
+        <div id="setting" class="tab_content">
+            <h2>Settings</h2>
+            <ul id="settingslist">
+                <li v-for="setting in settings">
+                    <input type="checkbox" v-model="setting.value" v-on:click="saveSettings()">
+                    <div>{{ setting.name }}</div>
+                </li>
+                <li>
+                    <div style="padding-top: 3px;">Grid Snap:&nbsp;</div>
+                    <select class="tool" id="canvas_grid" name="canvas_grid" onchange="setCanvasGrid()">
+                        <option id="16" selected>16x16 Grid</option>
+                        <option id="32">32x32 Grid</option>
+                        <option id="64">64x64 Grid</option>
+                    </select>
+                </li>
+            </ul>
+        </div>
+
+        <div id="keybindings" class="hidden tab_content">
+            <h2>Keybindings</h2>
+            <ul id="keybindlist">
+                <li v-for="key in keybinds">
+                    <div>{{ key.name }}</div>
+                    <div contenteditable="true" v-on:click.stop="prepareInput(key)">{{ key.char }}</div>
+                </li>
+            </ul>
+        </div>
+
+        <div id="credits" class="hidden tab_content">
+            <h2>About</h2>
+            <p><b>Version: </b>1.1.1</p>
+            <p><b>Creator: </b>JannisX11</p>
+            <p><b>Website: </b><a class="open-in-browser" href="http://server.zofenia.de/blockbench">server.zofenia.de/Blockbench</a></p>
+            <p>This app is built with <b>Electron</b>, a framework for creating native applications with web technologies like JavaScript, HTML, and CSS.</p>
+            <a class="open-in-browser" href="https://electron.atom.io">electron.atom.io</a>
+            <p><b>Icon Pack: </b><a href="https://material.io/icons/" class="open-in-browser">material.io/icons</a></p>
+            <p><b>Javascript Libraries: </b>
+                <a href="https://jquery.com" class="open-in-browser">jQuery</a>
+                <a href="https://jquery.com" class="open-in-browser">jQuery UI</a>
+                <a href="https://vuejs.org" class="open-in-browser">VueJS</a>
+                <a href="https://threejs.org" class="open-in-browser">ThreeJS</a>
+                <a href="https://github.com/lydell/json-stringify-pretty-compact/blob/master/LICENSE" class="open-in-browser">json-stringify-pretty-compact</a>
+            </p>
+        </div>
+
+        <div class="dialog_bar">
+            <button type="button" class="large" onclick="updateSelection();saveSettings();hideDialog()">Close</button>
+        </div>
+    </div>
+
+    
+    <header>
+        <div id="toolbar">
+            <ul>
+                <div id="title">Blockbench</div>
+                <li>
+                    <div>File</div>
+                    <ul class="dropdown">
+                        <li onclick="newProject()"><i class="material-icons">note_add</i>New Model</li>
+                        <li onclick="openFile()"><i class="material-icons">folder_open</i>Import Model</li>
+                        <li onclick="saveFile()"><i class="material-icons">save</i>Save</li>
+                        <li class="local_only" onclick="saveFileAs()"><i class="material-icons">insert_drive_file</i>Save As</li>
+                        <li onclick="showDialog('settings');setSettingsTab('keybindings')"><i class="material-icons">keyboard</i>Keybindings</li>
+                        <li onclick="showDialog('settings');setSettingsTab('credits')"><i class="material-icons">info_outline</i>About</li>
+                        <li onclick="showDialog('settings');setSettingsTab('setting')"><i class="material-icons">settings</i>Settings</li>
+                        <li><i class="material-icons">loyalty</i><a class="open-in-browser" href="http://server.zofenia.de/blockbench/donate.html">Donate</a></li>
+                    </ul>
+                </li>
+                <li class="m_edit">
+                    <div>Edit</div>
+                    <ul class="dropdown">
+                        <li onclick="undo()"><i class="material-icons">undo</i>Undo</li>
+                        <li onclick="addCube(0,0,0,canvas_grid,canvas_grid,canvas_grid)"><i class="material-icons">add_box</i>Add Cube</li>
+                        <li onclick="duplicateCubes()"><i class="material-icons">content_copy</i>Duplicate Cubes</li>
+                        <li onclick="deleteCubes()"><i class="material-icons">delete</i>Delete Cubes</li>
+                        <li onclick="openScaleAll()"><i class="material-icons">settings_overscan</i>Scale Cubes</li>
+                        <li onclick="rotateSelectedY(1)"><i class="material-icons">rotate_right</i>Rotate Clockwise</li>
+                        <li onclick="rotateSelectedY(3)"><i class="material-icons">rotate_left</i>Rotate Counterclockwise</li>
+                        <li onclick="mirror(2)"><i class="material-icons">flip</i>Flip X</li>
+                        <li onclick="mirror(1)"><i class="material-icons">flip</i>Flip Y</li>
+                        <li onclick="mirror(0)"><i class="material-icons">flip</i>Flip Z</li>
+                    </ul>
+                </li>
+                <li class="m_disp">
+                    <div>Display</div>
+                    <ul class="dropdown">
+                        <li onclick="openAddPreset()"><i class="material-icons">add</i>New Preset</li>
+                        <li onclick="copyDisplaySlot()"><i class="material-icons">content_copy</i>Copy</li>
+                        <li onclick="pasteDisplaySlot()"><i class="material-icons">content_paste</i>Paste</li>
+                    </ul>
+                </li>
+            </ul>
+            <div class="tool sel m_edit" id="tool_pointer" onclick="setTool('pointer')"><i class="material-icons">mouse</i><div class="tooltip">Mouse</div></div>
+            <div class="tool m_edit" id="tool_brush" onclick="setTool('brush')"><i class="material-icons">brush</i><div class="tooltip">Voxel Paint</div></div>
+            <div class="placeholder m_edit"></div>
+            <div class="tool wide m_edit"><div class="nslide" n-action="pos_x"></div><div class="tooltip">Move X</div></div>
+            <div class="tool wide m_edit"><div class="nslide" n-action="pos_y"></div><div class="tooltip">Move Y</div></div>
+            <div class="tool wide m_edit"><div class="nslide" n-action="pos_z"></div><div class="tooltip">Move Z</div></div>
+            <div class="placeholder m_edit"></div>
+            <div class="tool wide m_edit"><div class="nslide" n-action="size_x"></div><div class="tooltip">Scale X</div></div>
+            <div class="tool wide m_edit"><div class="nslide" n-action="size_y"></div><div class="tooltip">Scale Y</div></div>
+            <div class="tool wide m_edit"><div class="nslide" n-action="size_z"></div><div class="tooltip">Scale Z</div></div>
+            <div class="placeholder m_edit"></div>
+            <div class="tool m_edit" onclick="enterDisplaySettings()"><i class="material-icons">camera_alt</i><div class="tooltip">Display Mode</div></div>
+            <div id="edit_mode_button" class="tool m_disp" onclick="exitDisplaySettings()"><i class="material-icons">mode_edit</i><div class="tooltip">Edit Mode</div></div>
+        </div>
+    </header>
+    <div id="left_bar" class="sidebar">
+        <div id="uv" class="ui m_edit">
+            <h3>UV</h3>
+            <div id="texture_bar" onclick="loadUV()" class="bar tabs_small">
+                <input type="radio" name="side" id="north" checked>
+                <label for="north">North</label>
+                <input type="radio" name="side" id="east">
+                <label for="east">East</label>
+                <input type="radio" name="side" id="south">
+                <label for="south">South</label>
+                <input type="radio" name="side" id="west">
+                <label for="west">West</label>
+                <input type="radio" name="side" id="up">
+                <label for="up">Up</label>
+                <input type="radio" name="side" id="down">
+                <label for="down">Down</label>
+            </div>
+            <div id="uv_frame">
+                <div id="uv_size"></div>
+            </div>
+            <div class="bar">
+                <div class="tool" onclick="setUV('full')"><i class="material-icons">fullscreen</i><div class="tooltip">Full Size</div></div>
+                <div class="tool" onclick="setUV('auto')"><i class="material-icons">fullscreen_exit</i><div class="tooltip">Auto Size</div></div>
+                <div class="tool" onclick="copyUV()"><i class="material-icons">content_copy</i><div class="tooltip">Copy</div></div>
+                <div class="tool" onclick="pasteUV(event.shiftKey)"><i class="material-icons">content_paste</i><div class="tooltip">Paste</div></div>
+                <div class="tool" onclick="copyUV();pasteUV(true)"><i class="material-icons">format_color_fill</i><div class="tooltip">Apply To All Sides</div></div>
+                <select class="tool" id="grid_snap" name="grid_snap" onchange="setUVGrid()">
+                    <option id="16" selected>16px Grid</option>
+                    <option id="32">32px Grid</option>
+                    <option id="64">64px Grid</option>
+                    <option id="none">Free</option>
+                </select>
+            </div> 
+            <div class="bar">
+                <select class="tool" id="uv_rotate" name="uv_rotate" onchange="setUVRotation()">
+                    <option value="0" id="0" selected>No Rotation</option>
+                    <option value="90" id="90">90 Degrees</option>
+                    <option value="180" id="180">180 Degrees°</option>
+                    <option value="270" id="270">270 Degrees</option>
+                </select>
+                <input class="uv_coord" id="uv_coord_x1" type="number" min="0" max="16" oninput="inputToUV(this, 0)">
+                <input class="uv_coord" id="uv_coord_y1" type="number" min="0" max="16" oninput="inputToUV(this, 1)">
+                <input class="uv_coord" id="uv_coord_x2" type="number" min="0" max="16" oninput="inputToUV(this, 2)">
+                <input class="uv_coord" id="uv_coord_y2" type="number" min="0" max="16" oninput="inputToUV(this, 3)">
+            </div>
+            <div class="bar">
+                <input type="checkbox" id="cullface" class="text_padding" onclick="switchCullface()">
+                <label for="cullface" class="text_padding" onclick="switchCullface()">Cullface</label>
+                <!--input type="checkbox" v-model="group.autouv" id="autouv" class="text_padding" style="margin-left: 32px;">
+                <label for="autouv" class="text_padding">The Thing</label-->
+                <div class="tool" onclick="setUV('clear')"><i class="material-icons">clear</i><div class="tooltip">Clear</div></div>
+            </div>
+        </div>
+        <div id="display_settings" class="ui m_disp">
+            <h3>Display</h3>
+            <div id="display_bar" class="bar tabs_small">
+                <input class="hidden" type="radio" name="display" id="thirdperson_righthand" checked>
+                <label class="tool" for="thirdperson_righthand" onclick="loadDispThirdRight()"><i class="material-icons">accessibility</i><div class="tooltip">Thirdperson Right</div></label>
+                <input class="hidden" type="radio" name="display" id="thirdperson_lefthand">
+                <label class="tool" for="thirdperson_lefthand" onclick="loadDispThirdLeft()"><i class="material-icons">accessibility</i><div class="tooltip">Thirdperson Left</div></label>
+
+                <input class="hidden" type="radio" name="display" id="firstperson_righthand">
+                <label class="tool" for="firstperson_righthand" onclick="loadDispFirstRight()"><i class="material-icons">person</i><div class="tooltip">Firstperson Right</div></label>
+                <input class="hidden" type="radio" name="display" id="firstperson_lefthand">
+                <label class="tool" for="firstperson_lefthand" onclick="loadDispFirstLeft()"><i class="material-icons">person</i><div class="tooltip">Firstperson Left</div></label>
+
+                <input class="hidden" type="radio" name="display" id="head">
+                <label class="tool" for="head" onclick="loadDispHead()"><i class="material-icons">sentiment_satisfied</i><div class="tooltip">Head</div></label>
+
+                <input class="hidden" type="radio" name="display" id="ground">
+                <label class="tool" for="ground" onclick="loadDispGround()"><i class="material-icons">format_color_text</i><div class="tooltip">Ground</div></label>
+
+                <input class="hidden" type="radio" name="display" id="fixed">
+                <label class="tool" for="fixed" onclick="loadDispFixed()"><i class="material-icons">filter_frames</i><div class="tooltip">Frame</div></label>
+
+                <input class="hidden" type="radio" name="display" id="gui">
+                <label class="tool" for="gui" onclick="loadDispGUI()"><i class="material-icons">border_style</i><div class="tooltip">GUI</div></label>
+            </div>
+            <p>Rotation</p><div class="tool head_right" onclick="resetDisplaySettings('rotation')"><i class="material-icons">replay</i></div>
+            <div class="bar">
+                <input type="range" class="tool disp_range" id="rotation_x" name="" min="-180" max="180" step="1" value="0" oninput="syncDispInput(this, 'rotation', 'x')">
+                <input type="number" class="tool disp_text" id="rotation_x" oninput="syncDispInput(this, 'rotation', 'x')" min="-180" max="180" step="0.5" value="0">
+            </div>
+            <div class="bar">
+                <input type="range" class="tool disp_range" id="rotation_y" name="" min="-180" max="180" step="1" value="0" oninput="syncDispInput(this, 'rotation', 'y')">
+                <input type="number" class="tool disp_text" id="rotation_y" oninput="syncDispInput(this, 'rotation', 'y')" min="-180" max="180" step="0.5" value="0">
+            </div>
+            <div class="bar">
+                <input type="range" class="tool disp_range" id="rotation_z" name="" min="-180" max="180" step="1" value="0" oninput="syncDispInput(this, 'rotation', 'z')">
+                <input type="number" class="tool disp_text" id="rotation_z" oninput="syncDispInput(this, 'rotation', 'z')" min="-180" max="180" step="0.5" value="0">
+            </div>
+
+            <p>Translation</p><div class="tool head_right" onclick="resetDisplaySettings('translation')"><i class="material-icons">replay</i></div>
+            <div class="bar">
+                <input type="range" class="tool disp_range" id="translation_x" name="" min="-20" max="20" step="0.5" value="0" oninput="syncDispInput(this, 'translation', 'x')">
+                <input type="number" class="tool disp_text" id="translation_x" oninput="syncDispInput(this, 'translation', 'x')" min="-80" max="80" step="0.5" value="0">
+            </div>
+            <div class="bar">
+                <input type="range" class="tool disp_range" id="translation_y" name="" min="-20" max="20" step="0.5" value="0" oninput="syncDispInput(this, 'translation', 'y')">
+                <input type="number" class="tool disp_text" id="translation_y" oninput="syncDispInput(this, 'translation', 'y')" min="-80" max="80" step="0.5" value="0">
+            </div>
+            <div class="bar">
+                <input type="range" class="tool disp_range" id="translation_z" name="" min="-20" max="20" step="0.5" value="0" oninput="syncDispInput(this, 'translation', 'z')">
+                <input type="number" class="tool disp_text" id="translation_z" oninput="syncDispInput(this, 'translation', 'z')" min="-80" max="80" step="0.5" value="0">
+            </div>
+            
+            <p>Scale</p><div class="tool head_right" onclick="resetDisplaySettings('scale')"><i class="material-icons">replay</i></div>
+            <div class="bar">
+                <input type="range" class="tool disp_range scaleRange" id="scale_x" name="" min="-4" max="4" step="0.1" value="0" oninput="syncDispInput(this, 'scaleRange', 'x')">
+                <input type="number" class="tool disp_text scale" id="scale_x" oninput="syncDispInput(this, 'scale', 'x')" step="0.1" min="0" max="4">
+            </div>
+            <div class="bar">
+                <input type="range" class="tool disp_range scaleRange" id="scale_y" name="" min="-4" max="4" step="0.1" value="0" oninput="syncDispInput(this, 'scaleRange', 'y')">
+                <input type="number" class="tool disp_text scale" id="scale_y" oninput="syncDispInput(this, 'scale', 'y')" step="0.1" min="0" max="4">
+            </div>
+            <div class="bar">
+                <input type="range" class="tool disp_range scaleRange" id="scale_z" name="" min="-4" max="4" step="0.1" value="0" oninput="syncDispInput(this, 'scaleRange', 'z')">
+                <input type="number" class="tool disp_text scale" id="scale_z" oninput="syncDispInput(this, 'scale', 'z')" step="0.1" min="0" max="4">
+            </div>
+            <p>Options</p>
+            <div class="bar">
+                <div class="tool" onclick="copyDisplaySlot()"><i class="material-icons">content_copy</i><div class="tooltip">Copy</div></div>
+                <div class="tool" onclick="pasteDisplaySlot()"><i class="material-icons">content_paste</i><div class="tooltip">Paste</div></div>
+                <div id="display_presets">Presets
+                    <ul>
+                        <li v-for="preset in display_presets"><i v-on:click="deletePreset(preset, $event)" class="material-icons">clear</i><div v-on:click="applyPreset(preset, $event)">{{ preset.name }}</div></li>
+                    </ul>
+                    </div>
+                <div class="tool" onclick="openAddPreset()"><i class="material-icons">add</i><div class="tooltip">New Preset</div></div>
+            </div>
+        </div>
+        <div id="textures" class="ui m_edit">
+            <h3>Textures</h3>
+            <div class="bar">
+                <div class="tool" onclick="applyTexture()"><i class="material-icons">check_circle</i><div class="tooltip">Apply Texture</div></div>
+                <div class="tool" onclick="applyTexture(true)"><i class="material-icons">format_color_fill</i><div class="tooltip">Apply Texture To All Faces</div></div>
+                <div class="tool local_only" onclick="reloadTextures()"><i class="material-icons">refresh</i><div class="tooltip">Reload Textures</div></div>
+                <div class="tool" onclick="openTexture()"><i class="material-icons">library_add</i><div class="tooltip">Load Texture</div></div>
+            </div>
+            <ul id="texture_list" class="list">
+                <li v-for="texture in textures" v-bind:class="{ selected: texture.selected }" class="texture" v-on:click.stop="selectT(texture, $event)" v-on:dblclick="changePath(texture, $event)">
+                    <span class="texture_id hidden">{{ texture.id }}</span>
+                    <img v-bind:src="texture.iconpath" class="texture_icon" height="48px" width="48px" alt="missing image" />
+                    <div class="texture_name">{{ texture.name }}</div>
+                    <i class="material-icons" title="Particle" v-on:click.stop="toggleP(texture)">
+                        <template v-if="texture.particle === true">grain</template>
+                        <template v-else>remove</template>
+                    </i>
+                </li>
+            </ul>
+        </div>
+        <div class="placeholder m_disp"></div><br>
+        <button class="large m_disp" type="button" onclick="exitDisplaySettings()">Edit Mode</button>
+    </div>
+    <div id="right_bar" class="sidebar">
+        <div id="options" class="ui m_edit">
+            <h3>Rotation / Project</h3>
+            <div class="bar">
+            <div class="placeholder"></div>Rotation
+            </div>
+            <div class="bar">
+                <input type="range" class="tool half" id="cube_rotate" name="cube_rotate" min="-45" max="45" step="22.5" value="0" onchange="rotation(true)">
+                <select class="tool half" id="cube_axis" name="cube_axis" onchange="rotation(true)">
+                    <option value="x" id="x">X Axis</option>
+                    <option value="y" id="y" selected>Y Axis</option>
+                    <option value="z" id="z">Z Axis</option>
+                </select>
+                <div class="tool" id="cube_rescale_tool"><input type="checkbox" id="cube_rescale" onclick="rotation(true)"><div class="tooltip">Rescale</div></div>
+            </div>
+            <div class="bar">
+                <div class="placeholder"></div>Origin
+            </div>
+            <div class="bar">
+            <div class="tool wide"><div class="nslide" n-action="origin_x"></div><div class="tooltip">Origin X</div></div>
+            <div class="tool wide"><div class="nslide" n-action="origin_y"></div><div class="tooltip">Origin Y</div></div>
+            <div class="tool wide"><div class="nslide" n-action="origin_z"></div><div class="tooltip">Origin Z</div></div>
+                <div class="tool" id="origin2geometry" onclick="origin2geometry()"><i class="material-icons">center_focus_strong</i><div class="tooltip">Origin To Geometry</div></div>
+            </div>
+            <div class="bar">
+            <div class="placeholder"></div>Parent
+            </div>
+            <div class="bar">
+                <input type="text" id="parent_model" class="input_wide">
+            </div>
+
+            <div class="bar aocc_ui">
+            </div>
+            <div class="bar aocc_ui">
+                <div class="placeholder"></div>
+                <input id="ambientocclusion" type="checkbox" checked>
+                <label for="ambientocclusion" class="check_label">Ambient Occlusion</label>
+            </div>
+
+            <div class="bar paint_ui hidden">
+            <div class="placeholder"></div>Brush Template
+            </div>     
+            <div class="bar paint_ui hidden">
+                <input type="text" id="brush_template_name" class="input_wide">
+            </div>  
+        </div>
+        <div id="outliner" class="ui">
+            <h3>Outliner</h3>
+            <div class="bar m_edit">
+                <div class="tool" onclick="addCube(0,0,0,canvas_grid,canvas_grid,canvas_grid)"><i class="material-icons">add_box</i><div class="tooltip">Add Cube</div></div>
+                <div class="tool" onclick="duplicateCubes()"><i class="material-icons">content_copy</i><div class="tooltip">Duplicate</div></div>
+                <div class="tool" onclick="addGroup()"><i class="material-icons">library_add</i><div class="tooltip">New Group</div></div>
+                <div id="outliner_stats">0/0</div>
+            </div>
+            <ul id="cubes_list" class="list">
+
+                <li v-bind:class="{ selected: group.isselected }" v-for="group in groups" class="cube group m_edit" v-on:click.stop="selectG(group, $event)">
+                    <i class="material-icons drag" title="Drag Handle">filter_none</i>
+                    <input type="text" class="cube_name" v-model="group.name">
+                    <div class="group_count">{{ group.count }}</div>
+                    <i class="material-icons" v-on:click.stop="rebuildG(group)" title="Update With Selection">refresh</i>
+                    <i class="material-icons" v-on:click.stop="deleteG(group)" title="Delete">clear</i>
+                </li>
+
+
+                <li v-bind:class="{ selected: item.display.isselected }" v-for="item in elements" class="cube" v-on:click.stop="selectC(item, $event)">
+                    <i class="material-icons drag" title="Drag Handle">crop_square</i>
+                    <input type="text" class="cube_name" v-model="item.name">
+                    <i class="material-icons" v-on:click.stop="toggleV(item)" title="Visibility">
+                        <template v-if="item.display.visibility === true">visibility</template>
+                        <template v-else>visibility_off</template>
+                    </i>
+                    <div class="cube_context m_edit">
+                        <i class="material-icons">more_vert</i>
+                        <ul>
+                            <li>
+                                <input type="checkbox" v-model="item.shade" id="shading">
+                                <label for="shading">Shading</label>
+                            </li>
+                            <li>
+                                <input type="checkbox" v-model="item.display.autouv" id="autouv" onclick="triggerAutoUV()">
+                                <label for="autouv" onclick="triggerAutoUV()">Auto UV</label>
+                            </li>
+                            <li>
+                                <input type="checkbox" v-model="item.display.export" id="export">
+                                <label for="export">Export</label>
+                            </li>
+                        </ul>
+                    </div>
+                    <i class="material-icons m_edit" v-on:click.stop="deleteC(item)" title="Delete">clear</i>
+                </li>
+
+
+            </ul>
+        </div>
+    </div>
+    <div id="preview">
+        <canvas id="canvas">
+            An error occurred
+        </canvas>
+    </div>
+    <div id="donation_hint" class="hidden m_disp">This could be your skin. <a onclick="localStorage.setItem('donated', 'true')" class="open-in-browser" href="http://server.zofenia.de/blockbench/donate.html">Learn more</a></div>
+    <script>
+        canvas1 = document.getElementById('canvas')
+        init()
+        animate()
+    </script>
+</body>
+</html>
